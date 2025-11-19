@@ -1,0 +1,5 @@
+{
+  "name": "CHỤP MÀN HÌNH YOUTUBE ĐỐI THỦ",
+  "description": "An application that uses AI to automatically detect scene changes in a video and capture screenshots of significant moments.",
+  "requestFramePermissions": []
+}
