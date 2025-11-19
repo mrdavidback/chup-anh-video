@@ -6,7 +6,9 @@ export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
 
     return {
-      base: '/',
+      // Sử dụng đường dẫn tương đối './' thay vì tuyệt đối '/' 
+      // để đảm bảo ứng dụng tải được tài nguyên khi deploy lên GitHub Pages hoặc thư mục con.
+      base: './', 
       server: {
         port: 3000,
         host: '0.0.0.0',
@@ -18,8 +20,6 @@ export default defineConfig(({ mode }) => {
       },
       resolve: {
         alias: {
-          // Fix: `process.cwd()` was causing a TypeScript type error. `path.resolve('.')` is
-          // an equivalent that correctly resolves the project root and avoids the error.
           '@': path.resolve('.'),
         }
       }

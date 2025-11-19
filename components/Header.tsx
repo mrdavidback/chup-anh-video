@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 const CameraIcon = () => (
@@ -37,18 +36,22 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, onToggleSidebar, onEditA
     return (
         <header className="bg-gray-800/50 backdrop-blur-sm shadow-lg p-4 sticky top-0 z-10">
             <div className="container mx-auto flex items-center justify-between">
-                <div className="flex items-center">
-                    <CameraIcon />
-                    <h1 className="text-xl md:text-2xl font-bold text-white tracking-wider mr-4">
-                        Công Cụ Chụp Ảnh Video
-                    </h1>
+                <div className="flex items-center flex-wrap gap-2">
+                    <div className="flex items-center">
+                        <CameraIcon />
+                        <h1 className="text-xl md:text-2xl font-bold text-white tracking-wider mr-4">
+                            Công Cụ Chụp Ảnh Video
+                        </h1>
+                    </div>
+                    
+                    {/* Nút API Key nằm ngay sau tiêu đề */}
                     <button
                         onClick={onEditApiKey}
-                        className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-full transition-colors border border-gray-600 hover:border-gray-500"
+                        className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-500 rounded-full transition-colors shadow-md"
                         title="Cập nhật khóa API Gemini"
                     >
                         <KeyIcon />
-                        <span>API Key</span>
+                        <span>Khóa API</span>
                     </button>
                 </div>
                  <button 
