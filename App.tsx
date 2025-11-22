@@ -7,7 +7,6 @@ import InputForm from './components/InputForm';
 import Player from './components/Player';
 import ScreenshotGrid from './components/ScreenshotGrid';
 import Loader from './components/Loader';
-import ApiKeyModal from './components/ApiKeyModal';
 import { removeSubtitlesFromImage, removeLogoFromImage } from './utils/gemini';
 
 declare const html2canvas: any;
@@ -25,19 +24,11 @@ const App: React.FC = () => {
     const [isCapturing, setIsCapturing] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [isPausedByCaptureButton, setIsPausedByCaptureButton] = useState(false);
-    const [apiKey, setApiKey] = useState<string | null>(null);
-    const [apiKeyError, setApiKeyError] = useState<string | null>(null);
+    const [apiKey, setApiKey] = useState<string>('');
 
     const ytPlayerRef = useRef<YT.Player | null>(null);
     const localPlayerRef = useRef<HTMLVideoElement | null>(null);
     
-    useEffect(() => {
-        const savedKey = localStorage.getItem('gemini-api-key');
-        if (savedKey) {
-            setApiKey(savedKey);
-        }
-    }, []);
-
     useEffect(() => {
         return () => {
             if (videoSrc) URL.revokeObjectURL(videoSrc);
@@ -48,20 +39,6 @@ const App: React.FC = () => {
     useEffect(() => {
         setIsPausedByCaptureButton(false);
     }, [videoId, videoSrc]);
-
-    const handleKeySubmit = (key: string) => {
-        localStorage.setItem('gemini-api-key', key);
-        setApiKey(key);
-        setApiKeyError(null);
-    };
-
-    const handleEditApiKey = () => {
-        // Đặt apiKey về null để hiển thị lại ApiKeyModal
-        setApiKey(null);
-        // Tùy chọn: Xóa khỏi localStorage nếu muốn người dùng buộc phải nhập lại, 
-        // nhưng giữ lại thì tốt hơn cho trải nghiệm người dùng (chỉ cần sửa nếu sai).
-        // localStorage.removeItem('gemini-api-key'); 
-    };
 
     const handleSetInputMode = (mode: InputMode) => {
         setInputMode(mode);
@@ -127,33 +104,24 @@ const App: React.FC = () => {
 
     const handlePrimaryAction = async () => {
         setError(null);
-        setApiKeyError(null);
-        
-        if (!apiKey) {
-            setError("Vui lòng cung cấp khóa API để tiếp tục.");
-            return;
-        }
-
 
         if (inputMode === 'image') {
+            if (!apiKey) {
+                setError("Vui lòng nhập Gemini API Key để tiếp tục.");
+                return;
+            }
             if (!imageSrc) {
                 setError("Vui lòng tải lên một ảnh để xử lý.");
                 return;
             }
             setIsProcessing(true);
             try {
-                const imageWithoutLogo = await removeLogoFromImage(imageSrc, apiKey);
+                const imageWithoutLogo = await removeLogoFromImage(apiKey, imageSrc);
                 const newScreenshot: Screenshot = { dataUrl: imageWithoutLogo };
                 setScreenshots(prev => [newScreenshot, ...prev]);
             } catch (err) {
-                 if (err instanceof Error && (err.message.includes("API key not valid") || err.message.includes("permission to access"))) {
-                    setApiKeyError("Khóa API của bạn không hợp lệ hoặc đã hết hạn. Vui lòng nhập lại.");
-                    localStorage.removeItem('gemini-api-key');
-                    setApiKey(null);
-                 } else {
-                    console.error("Lỗi khi xóa logo:", err);
-                    setError("Có lỗi xảy ra khi xóa logo.");
-                 }
+                 console.error("Lỗi khi xóa logo:", err);
+                 setError("Có lỗi xảy ra khi xóa logo. Vui lòng kiểm tra API Key.");
             } finally {
                 setIsProcessing(false);
             }
@@ -184,30 +152,58 @@ const App: React.FC = () => {
             return;
         }
         
+        if (!apiKey) {
+            setError("Vui lòng nhập Gemini API Key để tiếp tục.");
+            return;
+        }
+
         setIsCapturing(true);
 
         try {
+            let currentFrameDataUrl = '';
+            let currentTime = 0;
+
+            // Pause video logic
             if (inputMode === 'url' && ytPlayerRef.current) {
                 ytPlayerRef.current.pauseVideo();
+                currentTime = ytPlayerRef.current.getCurrentTime();
             } else if (inputMode === 'upload' && localPlayerRef.current) {
                 localPlayerRef.current.pause();
+                currentTime = localPlayerRef.current.currentTime;
             }
+
             await new Promise(resolve => setTimeout(resolve, 150));
 
-            const canvas = await html2canvas(playerWrapper, { useCORS: true, allowTaint: true });
-            const currentFrameDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            if (inputMode === 'upload' && localPlayerRef.current) {
+                // Direct capture from video element for better quality and reliability
+                const video = localPlayerRef.current;
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    currentFrameDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                } else {
+                    throw new Error("Không thể tạo ngữ cảnh canvas.");
+                }
+            } else {
+                // html2canvas capture for YouTube/other
+                // NOTE: allowTaint: true causes SecurityError with toDataURL on cross-origin content. 
+                // We set it to false to prevent crashing.
+                const canvas = await html2canvas(playerWrapper, { 
+                    useCORS: true, 
+                    allowTaint: false 
+                });
+                currentFrameDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            }
             
+            if (!currentFrameDataUrl) throw new Error("Không thể tạo dữ liệu ảnh.");
+
             setIsCapturing(false);
             setIsProcessing(true);
 
-            const imageWithoutSubs = await removeSubtitlesFromImage(currentFrameDataUrl, apiKey);
-
-            let currentTime = 0;
-            if (inputMode === 'url' && ytPlayerRef.current) {
-                currentTime = ytPlayerRef.current.getCurrentTime();
-            } else if (inputMode === 'upload' && localPlayerRef.current) {
-                currentTime = localPlayerRef.current.currentTime;
-            }
+            const imageWithoutSubs = await removeSubtitlesFromImage(apiKey, currentFrameDataUrl);
 
             const newScreenshot: Screenshot = {
                 timestamp: currentTime,
@@ -222,14 +218,8 @@ const App: React.FC = () => {
             setIsPausedByCaptureButton(true);
 
         } catch (err) {
-            if (err instanceof Error && (err.message.includes("API key not valid") || err.message.includes("permission to access"))) {
-                setApiKeyError("Khóa API của bạn không hợp lệ hoặc đã hết hạn. Vui lòng nhập lại.");
-                localStorage.removeItem('gemini-api-key');
-                setApiKey(null);
-            } else {
-                console.error("Lỗi khi chụp hoặc xử lý ảnh:", err);
-                setError("Có lỗi xảy ra khi chụp hoặc xử lý ảnh.");
-            }
+            console.error("Lỗi khi chụp hoặc xử lý ảnh:", err);
+            setError("Có lỗi xảy ra khi chụp hoặc xử lý ảnh. Vui lòng kiểm tra API Key hoặc thử lại.");
         } finally {
             setIsCapturing(false);
             setIsProcessing(false);
@@ -272,18 +262,13 @@ const App: React.FC = () => {
         return "";
     }
 
-    if (!apiKey) {
-        return <ApiKeyModal onKeySubmit={handleKeySubmit} error={apiKeyError} />;
-    }
-
 
     return (
         <div className="bg-gray-900 text-white min-h-screen font-sans">
             {(isCapturing || isProcessing) && <Loader message={getLoaderMessage()} />}
             <Header 
               isSidebarOpen={isSidebarOpen} 
-              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-              onEditApiKey={handleEditApiKey}
+              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} 
             />
             <main className="container mx-auto p-4 md:p-8">
                 <div className={`grid grid-cols-1 lg:grid-cols-1fr transition-all duration-300 ease-in-out ${isSidebarOpen ? 'lg:grid-cols-[28rem_1fr] lg:gap-x-8' : 'lg:grid-cols-[0rem_1fr] lg:gap-x-0'}`}>
@@ -303,6 +288,8 @@ const App: React.FC = () => {
                               disabled={isCapturing || isProcessing}
                               isPausedByCaptureButton={isPausedByCaptureButton}
                               error={error}
+                              apiKey={apiKey}
+                              setApiKey={setApiKey}
                           />
                         </div>
                     </aside>
