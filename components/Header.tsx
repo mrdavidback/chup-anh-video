@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 const CameraIcon = () => (
@@ -19,40 +20,21 @@ const SidebarExpandIcon = () => (
     </svg>
 );
 
-const KeyIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11.542 16.458l-1.542 1.542V18a2 2 0 01-2 2H6a2 2 0 01-2-2v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-    </svg>
-);
-
 interface HeaderProps {
     isSidebarOpen: boolean;
     onToggleSidebar: () => void;
-    onEditApiKey: () => void;
 }
 
 
-const Header: React.FC<HeaderProps> = ({ isSidebarOpen, onToggleSidebar, onEditApiKey }) => {
+const Header: React.FC<HeaderProps> = ({ isSidebarOpen, onToggleSidebar }) => {
     return (
         <header className="bg-gray-800/50 backdrop-blur-sm shadow-lg p-4 sticky top-0 z-10">
             <div className="container mx-auto flex items-center justify-between">
-                <div className="flex items-center flex-wrap gap-2">
-                    <div className="flex items-center">
-                        <CameraIcon />
-                        <h1 className="text-xl md:text-2xl font-bold text-white tracking-wider mr-4">
-                            Công Cụ Chụp Ảnh Video
-                        </h1>
-                    </div>
-                    
-                    {/* Nút API Key nằm ngay sau tiêu đề */}
-                    <button
-                        onClick={onEditApiKey}
-                        className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-500 rounded-full transition-colors shadow-md"
-                        title="Cập nhật khóa API Gemini"
-                    >
-                        <KeyIcon />
-                        <span>Khóa API</span>
-                    </button>
+                <div className="flex items-center">
+                    <CameraIcon />
+                    <h1 className="text-xl md:text-2xl font-bold text-white tracking-wider">
+                        Công Cụ Chụp Ảnh Video
+                    </h1>
                 </div>
                  <button 
                     onClick={onToggleSidebar}

@@ -15,9 +15,11 @@ const blobUrlToBase64 = async (blobUrl: string): Promise<{ base64Data: string, m
     });
 };
 
-export const removeSubtitlesFromImage = async (base64ImageDataUrl: string, apiKey: string): Promise<string> => {
-    const ai = new GoogleGenAI({ apiKey });
+export const removeSubtitlesFromImage = async (apiKey: string, base64ImageDataUrl: string): Promise<string> => {
     try {
+        if (!apiKey) throw new Error("API Key is required");
+        
+        const ai = new GoogleGenAI({ apiKey });
         const prompt = "Đây là một ảnh chụp màn hình từ video. Vui lòng xóa văn bản phụ đề xuất hiện ở cuối ảnh một cách thông minh. Ảnh đầu ra phải có cùng kích thước với ảnh đầu vào. Nếu không có phụ đề, hãy trả lại ảnh gốc.";
 
         const imagePart = {
@@ -50,18 +52,17 @@ export const removeSubtitlesFromImage = async (base64ImageDataUrl: string, apiKe
         }
 
     } catch (error) {
-        if (error instanceof Error && (error.message.includes("API key not valid") || error.message.includes("permission to access"))) {
-            throw error;
-        }
         console.error("Lỗi khi gọi Gemini để xóa phụ đề:", error);
         // Khi có lỗi, trả lại ảnh gốc để không làm gián đoạn quy trình
         return base64ImageDataUrl;
     }
 };
 
-export const removeLogoFromImage = async (imageUrl: string, apiKey: string): Promise<string> => {
-    const ai = new GoogleGenAI({ apiKey });
+export const removeLogoFromImage = async (apiKey: string, imageUrl: string): Promise<string> => {
     try {
+        if (!apiKey) throw new Error("API Key is required");
+
+        const ai = new GoogleGenAI({ apiKey });
         const prompt = "Vui lòng xóa một cách thông minh bất kỳ logo hoặc watermark nào khỏi hình ảnh này. Hình ảnh đầu ra phải có cùng kích thước với hình ảnh đầu vào. Nếu không có logo, hãy trả lại hình ảnh gốc.";
 
         const { base64Data, mimeType } = await blobUrlToBase64(imageUrl);
@@ -96,9 +97,6 @@ export const removeLogoFromImage = async (imageUrl: string, apiKey: string): Pro
         }
 
     } catch (error) {
-        if (error instanceof Error && (error.message.includes("API key not valid") || error.message.includes("permission to access"))) {
-            throw error;
-        }
         console.error("Lỗi khi gọi Gemini để xóa logo:", error);
         return imageUrl;
     }

@@ -1,3 +1,4 @@
+
 // Fix: Add YouTube Iframe API type definitions to fix YT namespace errors.
 declare global {
   namespace YT {
@@ -44,4 +45,10 @@ export type InputMode = 'url' | 'upload' | 'image';
 export interface Screenshot {
   timestamp?: number;
   dataUrl: string;
+}
+
+// Fix: Add TranscriptLine interface for use in TimestampLinksGrid.
+export interface TranscriptLine {
+  timestamp: number;
+  text: string;
 }

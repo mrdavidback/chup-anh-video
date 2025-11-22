@@ -14,6 +14,8 @@ interface InputFormProps {
     disabled: boolean;
     isPausedByCaptureButton: boolean;
     error: string | null;
+    apiKey: string;
+    setApiKey: (key: string) => void;
 }
 
 const Instructions: React.FC<{mode: InputMode}> = ({mode}) => {
@@ -24,13 +26,13 @@ const Instructions: React.FC<{mode: InputMode}> = ({mode}) => {
             </h3>
             <div className="mt-4 space-y-3 text-gray-300 text-sm">
                 { (mode === 'url' || mode === 'upload') && <>
-                    <p><strong>Bước 1:</strong> Cung cấp video qua URL YouTube hoặc tải tệp video lên.</p>
+                    <p><strong>Bước 1:</strong> Nhập API Key và cung cấp video qua URL YouTube hoặc tải tệp video lên.</p>
                     <p><strong>Bước 2:</strong> Nhấn "Chụp Ảnh" để tạm dừng video. AI sẽ tự động xoá phụ đề và lưu lại khoảnh khắc.</p>
                     <p><strong>Bước 3:</strong> Nhấn "Phát Video" để tiếp tục xem.</p>
                     <p><strong>Bước 4:</strong> Các ảnh đã chụp sẽ xuất hiện trong bộ sưu tập bên dưới.</p>
                 </>}
                  { mode === 'image' && <>
-                    <p><strong>Bước 1:</strong> Tải lên tệp ảnh có chứa logo hoặc chi tiết bạn muốn xóa.</p>
+                    <p><strong>Bước 1:</strong> Nhập API Key và tải lên tệp ảnh có chứa logo hoặc chi tiết bạn muốn xóa.</p>
                     <p><strong>Bước 2:</strong> Ảnh sẽ được hiển thị để xem trước.</p>
                     <p><strong>Bước 3:</strong> Nhấn "Xóa Logo" để AI xử lý ảnh.</p>
                     <p><strong>Bước 4:</strong> Ảnh đã xử lý sẽ xuất hiện trong bộ sưu tập bên dưới để bạn tải về.</p>
@@ -60,6 +62,12 @@ const MagicWandIcon = () => (
     </svg>
 );
 
+const KeyIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 000-2z" clipRule="evenodd" />
+    </svg>
+);
+
 
 const InputForm: React.FC<InputFormProps> = (props) => {
     
@@ -75,6 +83,8 @@ const InputForm: React.FC<InputFormProps> = (props) => {
         disabled,
         isPausedByCaptureButton,
         error,
+        apiKey,
+        setApiKey,
     } = props;
     
     const handleVideoFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -102,6 +112,24 @@ const InputForm: React.FC<InputFormProps> = (props) => {
     return (
         <div className="h-full flex flex-col bg-gray-800 p-6 rounded-lg shadow-xl">
             <div className="flex-1 min-h-0 overflow-y-auto space-y-6 pr-2 -mr-2">
+                
+                <div className="bg-gray-900/50 p-3 rounded-lg border border-gray-700">
+                    <label htmlFor="apiKey" className="flex items-center text-sm font-bold text-yellow-400 mb-2">
+                        <KeyIcon /> Gemini API Key (Bắt buộc)
+                    </label>
+                    <input
+                        type="password"
+                        id="apiKey"
+                        value={apiKey}
+                        onChange={(e) => setApiKey(e.target.value)}
+                        placeholder="Nhập khóa API của bạn tại đây..."
+                        className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition text-sm"
+                        disabled={disabled}
+                        autoComplete="off"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Khóa của bạn chỉ được sử dụng trong phiên làm việc này.</p>
+                </div>
+
                 <Instructions mode={inputMode} />
 
                 <div>
