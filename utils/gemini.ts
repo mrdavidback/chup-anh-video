@@ -1,5 +1,5 @@
 
-import { GoogleGenAI, Modality } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 
 const blobUrlToBase64 = async (blobUrl: string): Promise<{ base64Data: string, mimeType: string }> => {
     const blob = await fetch(blobUrl).then(res => res.blob());
@@ -20,7 +20,8 @@ export const removeSubtitlesFromImage = async (apiKey: string, base64ImageDataUr
         if (!apiKey) throw new Error("API Key is required");
         
         const ai = new GoogleGenAI({ apiKey });
-        const prompt = "Đây là một ảnh chụp màn hình từ video. Vui lòng xóa văn bản phụ đề xuất hiện ở cuối ảnh một cách thông minh. Ảnh đầu ra phải có cùng kích thước với ảnh đầu vào. Nếu không có phụ đề, hãy trả lại ảnh gốc.";
+        // Use English prompt for better instruction following on visual tasks
+        const prompt = "Remove the subtitles or text overlays from the bottom of this image. Output only the modified image with the text removed. Maintain the original image quality and details.";
 
         const imagePart = {
             inlineData: {
@@ -37,23 +38,24 @@ export const removeSubtitlesFromImage = async (apiKey: string, base64ImageDataUr
                     imagePart
                 ],
             },
-            config: {
-                responseModalities: [Modality.IMAGE],
-            },
+            // Removed responseModalities to avoid potential conflicts if the model returns text preamble
         });
         
-        const firstPart = response.candidates?.[0]?.content?.parts?.[0];
-        if (firstPart && firstPart.inlineData) {
-            const base64ImageBytes = firstPart.inlineData.data;
-            return `data:image/jpeg;base64,${base64ImageBytes}`;
-        } else {
-            console.warn("Gemini không trả về hình ảnh. Trả lại ảnh gốc.");
-            return base64ImageDataUrl; // Quay lại ảnh gốc
+        // Fix: Iterate through all parts to find the image. 
+        // The model might return text first (e.g., "Here is the image:") then the image.
+        if (response.candidates?.[0]?.content?.parts) {
+            for (const part of response.candidates[0].content.parts) {
+                if (part.inlineData && part.inlineData.data) {
+                    return `data:image/jpeg;base64,${part.inlineData.data}`;
+                }
+            }
         }
+        
+        console.warn("Gemini did not return an image part. Returning original.");
+        return base64ImageDataUrl; 
 
     } catch (error) {
-        console.error("Lỗi khi gọi Gemini để xóa phụ đề:", error);
-        // Khi có lỗi, trả lại ảnh gốc để không làm gián đoạn quy trình
+        console.error("Error calling Gemini to remove subtitles:", error);
         return base64ImageDataUrl;
     }
 };
@@ -63,7 +65,7 @@ export const removeLogoFromImage = async (apiKey: string, imageUrl: string): Pro
         if (!apiKey) throw new Error("API Key is required");
 
         const ai = new GoogleGenAI({ apiKey });
-        const prompt = "Vui lòng xóa một cách thông minh bất kỳ logo hoặc watermark nào khỏi hình ảnh này. Hình ảnh đầu ra phải có cùng kích thước với hình ảnh đầu vào. Nếu không có logo, hãy trả lại hình ảnh gốc.";
+        const prompt = "Remove any logos or watermarks from this image. Output only the cleaned image. Maintain the original dimensions and quality.";
 
         const { base64Data, mimeType } = await blobUrlToBase64(imageUrl);
 
@@ -82,22 +84,23 @@ export const removeLogoFromImage = async (apiKey: string, imageUrl: string): Pro
                     imagePart
                 ],
             },
-            config: {
-                responseModalities: [Modality.IMAGE],
-            },
         });
         
-        const firstPart = response.candidates?.[0]?.content?.parts?.[0];
-        if (firstPart && firstPart.inlineData) {
-            const base64ImageBytes = firstPart.inlineData.data;
-            return `data:${mimeType};base64,${base64ImageBytes}`;
-        } else {
-            console.warn("Gemini không trả về hình ảnh. Trả lại ảnh gốc.");
-            return imageUrl;
+        // Fix: Iterate through all parts to find the image.
+        if (response.candidates?.[0]?.content?.parts) {
+            for (const part of response.candidates[0].content.parts) {
+                if (part.inlineData && part.inlineData.data) {
+                    // Return with the original mimeType if possible, or assume result matches input context
+                    return `data:${mimeType};base64,${part.inlineData.data}`;
+                }
+            }
         }
 
+        console.warn("Gemini did not return an image part. Returning original.");
+        return imageUrl;
+
     } catch (error) {
-        console.error("Lỗi khi gọi Gemini để xóa logo:", error);
+        console.error("Error calling Gemini to remove logo:", error);
         return imageUrl;
     }
 };
